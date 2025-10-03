@@ -145,9 +145,9 @@ def fill_gaps_in_ohlcvs(df):
     interval = 60000
     new_timestamps = np.arange(df["timestamp"].iloc[0], df["timestamp"].iloc[-1] + interval, interval)
     new_df = df.set_index("timestamp").reindex(new_timestamps)
-    new_df.close = new_df.close.ffill()
+    new_df["close"] = new_df["close"].ffill()
     for col in ["open", "high", "low"]:
-        new_df[col] = new_df[col].fillna(new_df.close)
+        new_df[col] = new_df[col].fillna(new_df["close"])
     new_df["volume"] = new_df["volume"].fillna(0.0)
     return new_df.reset_index().rename(columns={"index": "timestamp"})
 
@@ -167,9 +167,9 @@ def attempt_gap_fix_ohlcvs(df, symbol=None, verbose=True):
         )
     new_timestamps = np.arange(df["timestamp"].iloc[0], df["timestamp"].iloc[-1] + interval, interval)
     new_df = df.set_index("timestamp").reindex(new_timestamps)
-    new_df.close = new_df.close.ffill()
+    new_df["close"] = new_df["close"].ffill()
     for col in ["open", "high", "low"]:
-        new_df[col] = new_df[col].fillna(new_df.close)
+        new_df[col] = new_df[col].fillna(new_df["close"])
     new_df["volume"] = new_df["volume"].fillna(0.0)
     return new_df.reset_index().rename(columns={"index": "timestamp"})
 
@@ -984,7 +984,7 @@ class OHLCVManager:
         symbolf = self.get_symbol(coin).replace("/USDT:", "") + "M"
         base_url = "https://historical-data.kucoin.com/data/futures/daily/klines/"
         start = datetime.datetime(start_year, 1, 1)
-        end = datetime.datetime.utcnow()
+        end = datetime.datetime.now(datetime.timezone.utc)
         earliest = None
 
         while start <= end:

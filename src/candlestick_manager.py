@@ -31,7 +31,9 @@ ONE_DAY_MS = 86_400_000
 
 
 def _utc_now_ms() -> int:
-    return int(dt.datetime.utcnow().timestamp() * 1000)
+    """Return the current UTC timestamp in milliseconds using timezone-aware datetimes."""
+
+    return int(dt.datetime.now(dt.timezone.utc).timestamp() * 1000)
 
 
 def _to_ms(ts: TimestampLike) -> int:
@@ -64,10 +66,9 @@ def _ceil_minute(ms: int) -> int:
 
 
 def _day_start(ms: int) -> int:
-    dt_utc = dt.datetime.utcfromtimestamp(ms / 1000.0)
-    return int(
-        dt.datetime(dt_utc.year, dt_utc.month, dt_utc.day, tzinfo=dt.timezone.utc).timestamp() * 1000
-    )
+    dt_utc = dt.datetime.fromtimestamp(ms / 1000.0, tz=dt.timezone.utc)
+    start = dt.datetime(dt_utc.year, dt_utc.month, dt_utc.day, tzinfo=dt.timezone.utc)
+    return int(start.timestamp() * 1000)
 
 
 def _day_end_exclusive(ms: int) -> int:
@@ -75,12 +76,12 @@ def _day_end_exclusive(ms: int) -> int:
 
 
 def _ym_str(ms: int) -> str:
-    d = dt.datetime.utcfromtimestamp(ms / 1000.0)
+    d = dt.datetime.fromtimestamp(ms / 1000.0, tz=dt.timezone.utc)
     return f"{d.year:04d}-{d.month:02d}"
 
 
 def _ymd_str(ms: int) -> str:
-    d = dt.datetime.utcfromtimestamp(ms / 1000.0)
+    d = dt.datetime.fromtimestamp(ms / 1000.0, tz=dt.timezone.utc)
     return f"{d.year:04d}-{d.month:02d}-{d.day:02d}"
 
 
