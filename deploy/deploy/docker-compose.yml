@@ -1,0 +1,30 @@
+version: "3.9"
+services:
+  passivbot:
+    image: ${OCIR_URL}/${OCIR_NAMESPACE}/${OCIR_REPO}:${TAG:-latest}
+    restart: unless-stopped
+    env_file:
+      - ../env/.env
+    volumes:
+      - /opt/passivbot/data:/data
+      - /opt/passivbot/api-keys.json:/app/api-keys.json:ro
+      - /opt/passivbot/configs:/app/configs:ro
+    healthcheck:
+      test: ["CMD-SHELL", "/app/deploy/healthcheck.sh"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "8080:8080"
+
+  gui:
+    build:
+      context: ..
+      dockerfile: deploy/gui.Dockerfile
+    restart: unless-stopped
+    environment:
+      - API_URL=http://passivbot:8080
+    ports:
+      - "3000:3000"
+    depends_on:
+      - passivbot
