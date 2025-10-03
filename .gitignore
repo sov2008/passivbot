@@ -381,3 +381,20 @@ Cargo.lock
 /api-keys.json
 /caches
 /optimize_results
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.env
+.env.*
+env/*.env
+env/api-keys.json
+/data/
+*.log
+
+# Node
+node_modules/
+gui/web/dist/
+
+# Docker
+*.pid
