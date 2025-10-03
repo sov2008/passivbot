@@ -1,0 +1,74 @@
+name: Release & Push to Registries
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+env:
+  IMAGE_NAME: passivbot
+  GHCR_REGISTRY: ghcr.io/${{ github.repository_owner }}/passivbot
+  OCI_REGION: ${{ secrets.OCI_REGION }}                 # e.g. eu-frankfurt-1
+  OCIR_NAMESPACE: ${{ secrets.OCIR_NAMESPACE }}         # tenancy namespace
+  OCIR_REPO: ${{ secrets.OCIR_REPO }}                   # e.g. passivbot
+  OCIR_URL: ${{ secrets.OCIR_URL }}                     # e.g. fra.ocir.io
+  VERSION: ${{ github.ref_name }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ env.GHCR_REGISTRY }}
+            ${{ env.OCIR_URL }}/${{ env.OCIR_NAMESPACE }}/${{ env.OCIR_REPO }}
+          tags: |
+            type=raw,value=${{ env.VERSION }}
+            type=raw,value=latest
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Login to OCIR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.OCIR_URL }}
+          username: ${{ secrets.OCIR_USERNAME }}         # usually 'tenancyname/oracleusername'
+          password: ${{ secrets.OCIR_AUTH_TOKEN }}       # auth token, not account password!
+
+      - name: Build & Push images
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/passivbot.Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.VERSION }}
+          name: "Passivbot ${{
+            env.VERSION }}"
+          generate_release_notes: true
