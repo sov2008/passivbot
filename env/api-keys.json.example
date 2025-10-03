@@ -1,1 +1,13 @@
+{
+  "binanceusdm": {
+    "exchange": "binanceusdm",
+    "api_key": "PUT_HERE_ON_VM_ONLY",
+    "secret": "PUT_HERE_ON_VM_ONLY"
+  },
+  "binanceusdm_testnet": {
+    "exchange": "binanceusdm_testnet",
+    "api_key": "TESTNET_KEY",
+    "secret": "TESTNET_SECRET"
+  }
+}
 
