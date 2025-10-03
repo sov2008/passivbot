@@ -37,7 +37,7 @@ def get_file_mod_utc(filepath):
     mod_time_epoch = os.path.getmtime(filepath)
 
     # Convert the timestamp to a UTC datetime object
-    mod_time_utc = datetime.datetime.utcfromtimestamp(mod_time_epoch)
+    mod_time_utc = datetime.datetime.fromtimestamp(mod_time_epoch, datetime.timezone.utc)
 
     # Return the UTC timestamp
     return mod_time_utc.timestamp() * 1000
@@ -45,8 +45,10 @@ def get_file_mod_utc(filepath):
 
 def ts_to_date_utc(timestamp: float) -> str:
     if timestamp > 253402297199:
-        return str(datetime.datetime.utcfromtimestamp(timestamp / 1000)).replace(" ", "T")
-    return str(datetime.datetime.utcfromtimestamp(timestamp)).replace(" ", "T")
+        dt_obj = datetime.datetime.fromtimestamp(timestamp / 1000, datetime.timezone.utc)
+    else:
+        dt_obj = datetime.datetime.fromtimestamp(timestamp, datetime.timezone.utc)
+    return dt_obj.replace(tzinfo=None).isoformat()
 
 
 def date_to_ts(d):
@@ -73,7 +75,7 @@ def make_get_filepath(filepath: str) -> str:
 
 
 def utc_ms() -> float:
-    return datetime.datetime.utcnow().timestamp() * 1000
+    return datetime.datetime.now(datetime.timezone.utc).timestamp() * 1000
 
 
 def filter_markets(markets: dict, exchange: str, verbose=False) -> (dict, dict, dict):
