@@ -1,4 +1,4 @@
-name: CI
+name: CI/CD to GHCR & OCI
 
 on:
   workflow_dispatch:
@@ -8,12 +8,76 @@ on:
       - master
 
 jobs:
-  build:
+  build-and-push:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write        # push в GHCR
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # сюда добавьте ваши шаги сборки/тестов/публикации
-      - name: Say hello
-        run: echo "CI triggered on ${{ github.ref }}"
+      - name: Compute image name (lowercase)
+        id: img
+        run: |
+          OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          REPO_LC=$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]')
+          echo "image=ghcr.io/${OWNER_LC}/${REPO_LC}" >> $GITHUB_OUTPUT
+          echo "sha=${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "Will push: ghcr.io/${OWNER_LC}/${REPO_LC}:{latest,${{ github.sha }}}"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & Push (latest + sha)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ steps.img.outputs.image }}:latest
+            ${{ steps.img.outputs.image }}:${{ steps.img.outputs.sha }}
+          platforms: linux/amd64    # твой сервер x86_64; добавишь arm64 при необходимости
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH deploy (docker compose pull & up)
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          port: ${{ secrets.SSH_PORT }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
+            mkdir -p /srv/app
+            cd /srv/app
+            # создадим docker-compose.yml если его ещё нет
+            if [ ! -f docker-compose.yml ]; then
+              cat > docker-compose.yml <<'YAML'
+            services:
+              app:
+                image: ${{ steps.img.outputs.image }}:latest
+                restart: unless-stopped
+                # пример: раскрой по нужде
+                # ports:
+                #  - "80:3000"
+                # env_file:
+                #  - .env
+            YAML
+            fi
+            docker compose pull
+            docker compose up -d
+            docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Status}}"
