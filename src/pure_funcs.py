@@ -247,8 +247,10 @@ def denanify(x, nan=0.0, posinf=0.0, neginf=0.0):
 
 def ts_to_date(timestamp: float) -> str:
     if timestamp > 253402297199:
-        return str(datetime.datetime.utcfromtimestamp(timestamp / 1000)).replace(" ", "T")
-    return str(datetime.datetime.utcfromtimestamp(timestamp)).replace(" ", "T")
+        dt_obj = datetime.datetime.fromtimestamp(timestamp / 1000, datetime.timezone.utc)
+    else:
+        dt_obj = datetime.datetime.fromtimestamp(timestamp, datetime.timezone.utc)
+    return dt_obj.replace(tzinfo=None).isoformat()
 
 
 def date2ts_utc(datetime_string):
